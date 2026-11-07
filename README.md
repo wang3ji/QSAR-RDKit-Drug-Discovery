@@ -65,6 +65,29 @@ is the instructive failure: it learns the structure-activity landscape
 efficiently and finds few hits, which is the right reminder that "informative"
 and "valuable" are different objectives.
 
+**6. Assay quality costs hits, but the bill arrives mostly as false
+confidence.** Holding the model and the selection rule fixed and varying only
+the simulated measurement error, a campaign on a poor assay (SD 1.0) found
+**17.8 fewer potent compounds** than the same campaign on a noise-free one —
+8.4% of the yield, Wilcoxon *p* = 0.014 over 10 paired seeds. That is a real
+but modest penalty, and adjacent noise levels are not separable at this number
+of seeds, so ranking-based selection turns out to be fairly tolerant of label
+noise. What is not modest, and not ambiguous, is the false-call rate:
+
+| Inter-assay SD | Potent compounds found | Wrongly called active |
+|---|---|---|
+| 0.0 (noise-free) | 212.1 | **0** |
+| 0.3 | 208.7 | 12.8 |
+| 0.6 (measured) | 204.5 | 20.4 |
+| 1.0 (poor) | 194.3 | **34.5** |
+
+Out of 368 compounds assayed, mean of 10 seeds. Every false call is a compound
+the campaign believes is potent and is not, so it consumes synthesis and
+follow-up before failing confirmation — and because the model is retrained on
+those labels, it also learns from them. The honest summary is that a weak
+assay does not mainly slow an AI-driven campaign down. It mainly fills the
+hit list with compounds that are not there.
+
 
 ## Figures
 
@@ -72,7 +95,9 @@ and "valuable" are different objectives.
 
 ![Rank order survives where absolute prediction does not](reports/figures/generalization.png)
 
-![A weaker assay costs the campaign real hits](reports/figures/assay_quality.png)
+![Going from a perfect assay to a poor one costs 8% of the hits](reports/figures/assay_quality.png)
+
+![What assay noise reliably produces is false confidence](reports/figures/false_calls.png)
 
 ![Choosing the next plate by model score](reports/figures/acquisition.png)
 
@@ -97,7 +122,8 @@ and worth reporting as a negative result rather than quietly dropping.
 
 Full numbers: [`reports/benchmark.csv`](reports/benchmark.csv),
 [`reports/assay_noise.json`](reports/assay_noise.json),
-[`reports/curation.json`](reports/curation.json).
+[`reports/curation.json`](reports/curation.json),
+[`reports/campaign_assay_quality_contrasts.json`](reports/campaign_assay_quality_contrasts.json).
 
 ## How the assay model works
 
@@ -141,8 +167,15 @@ pip install -e ".[dev,plots]"
 a2a-qsar curate         # standardise structures, aggregate replicates    (~1 min)
 a2a-qsar assay-noise    # estimate inter-assay error and its cost         (~1 min)
 a2a-qsar benchmark      # models x representations x splits                (~2 min)
-a2a-qsar campaign       # the screening-campaign simulation               (~45 min)
+a2a-qsar campaign       # the screening-campaign simulation               (~11 min)
 a2a-qsar figures        # render the figures above
+```
+
+The assay-quality numbers above come from a longer run, because three seeds
+turned out to be too few to separate the arms:
+
+```bash
+a2a-qsar campaign --experiment assay-quality --replicates 10   # ~11 min
 ```
 
 Every number in this README comes from one of those commands. All randomness
@@ -166,7 +199,7 @@ src/a2a_qsar/
   evaluate.py   metrics chosen for ranking and triage, not just R²
   plots.py      the figures above
   cli.py        one command per experiment
-tests/          63 tests, including the behaviour each scientific claim rests on
+tests/          67 tests, including the behaviour each scientific claim rests on
 data/raw/       committed snapshots + PROVENANCE.md
 docs/           model card: intended use, out-of-scope uses, known biases
 notebooks/      the original exploratory notebooks this grew out of
@@ -189,9 +222,17 @@ notebook and something a team could run:
   result.
 - **Enrichment and rank correlation as first-class metrics.** The model is used
   to choose plates, so it is scored the way it is used.
+- **Paired comparisons between campaign arms.** Arms share their seeds, so
+  the same starting compounds and the same acquisition randomness appear in
+  both. Between-seed spread is larger than the effect being measured, so an
+  unpaired comparison of means would have hidden a difference that is
+  consistent within every seed. The first run used three seeds and could not
+  separate the arms; that is what prompted the ten-seed run rather than a
+  softer claim.
 - **Tests that encode the science.** That zero-noise campaigns make no false
   calls, that pooled SD exceeds median SD, that a scaffold split leaks no
-  scaffold, that greedy selection beats random — each is a test, so a
+  scaffold, that greedy selection beats random, that a paired contrast finds
+  an effect smaller than the between-seed spread — each is a test, so a
   refactor cannot quietly break a claim in this README.
 
 ## Limitations

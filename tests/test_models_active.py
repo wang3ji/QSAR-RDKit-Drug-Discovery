@@ -333,3 +333,65 @@ def test_summarize_aggregates_across_seeds():
     assert set(summary["acquisition"]) == {"random", "greedy"}
     assert (summary["n_seeds"] == 2).all()
     assert summary["actives_found_sd"].notna().any()
+
+
+def test_paired_contrast_detects_a_consistent_within_seed_difference():
+    # Between-seed spread (0..90) dwarfs the effect (10), so only a paired
+    # comparison can see it. This is the situation the real campaign is in.
+    rows = []
+    for seed in range(10):
+        baseline = 100 + seed * 10
+        rows.append({"arm": "clean", "seed": seed, "round": 1, "found": baseline})
+        rows.append({"arm": "noisy", "seed": seed, "round": 1, "found": baseline - 10})
+    results = pd.DataFrame(rows)
+
+    contrast = active.paired_contrast(
+        results, "arm", "clean", "noisy", metric="found", round_index=1
+    )
+
+    assert contrast["n_seeds"] == 10
+    assert contrast["mean_difference"] == pytest.approx(10.0)
+    assert contrast["median_difference"] == pytest.approx(10.0)
+    assert contrast["wilcoxon_p"] < 0.01
+    assert contrast["paired_t_p"] < 0.01
+
+
+def test_paired_contrast_reports_no_effect_when_arms_match():
+    rng = np.random.default_rng(0)
+    rows = []
+    for seed in range(10):
+        value = float(rng.normal(100, 20))
+        rows.append({"arm": "a", "seed": seed, "round": 1, "found": value})
+        rows.append({"arm": "b", "seed": seed, "round": 1, "found": value})
+    contrast = active.paired_contrast(
+        pd.DataFrame(rows), "arm", "a", "b", metric="found", round_index=1
+    )
+    assert contrast["mean_difference"] == pytest.approx(0.0)
+    # Identical arms give no test statistic rather than a misleading p-value.
+    assert np.isnan(contrast["wilcoxon_p"])
+
+
+def test_paired_contrast_requires_shared_seeds():
+    rows = [
+        {"arm": "a", "seed": 0, "round": 1, "found": 1.0},
+        {"arm": "b", "seed": 1, "round": 1, "found": 2.0},
+    ]
+    with pytest.raises(ValueError, match="shared seeds"):
+        active.paired_contrast(
+            pd.DataFrame(rows), "arm", "a", "b", metric="found", round_index=1
+        )
+
+
+def test_paired_contrast_defaults_to_the_final_round():
+    rows = []
+    for seed in range(5):
+        for round_index, value in ((1, 10.0), (2, 50.0)):
+            rows.append(
+                {"arm": "a", "seed": seed, "round": round_index, "found": value}
+            )
+            rows.append(
+                {"arm": "b", "seed": seed, "round": round_index, "found": value - 5}
+            )
+    contrast = active.paired_contrast(pd.DataFrame(rows), "arm", "a", "b", metric="found")
+    assert contrast["round"] == 2
+    assert contrast["reference_mean"] == pytest.approx(50.0)

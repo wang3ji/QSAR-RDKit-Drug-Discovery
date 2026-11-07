@@ -169,7 +169,7 @@ def plot_assay_quality(path: Path | None = None) -> Path:
             (last["n_assayed"], last["actives_found_mean"], f"SD {sd:.1f}", color)
         )
 
-    axes.set_title("A noisier assay finds fewer hits, but the arms overlap")
+    axes.set_title("Going from a perfect assay to a poor one costs 8% of the hits")
     axes.set_xlabel("Compounds assayed")
     axes.set_ylabel("Potent compounds found (pActivity ≥ 8)")
     axes.legend(title="Inter-assay SD (log units)", title_fontsize=9, loc="upper left")
@@ -180,9 +180,10 @@ def plot_assay_quality(path: Path | None = None) -> Path:
     _caption(
         figure,
         "Identical model and acquisition rule in every arm; only the simulated "
-        f"measurement error differs. Mean of {n_seeds} seeds, band = ±1 SD. The "
-        "bands overlap throughout, so read the ordering of the means as a trend "
-        "and not as a significant difference between adjacent arms.",
+        f"measurement error differs. Mean of {n_seeds} seeds, band = ±1 SD. Arms "
+        "share seeds, so they are compared paired: SD 0.0 against SD 1.0 is "
+        "17.8 compounds (Wilcoxon p = 0.014). Adjacent arms are not separable "
+        "at this number of seeds.",
     )
 
     FIGURES.mkdir(parents=True, exist_ok=True)

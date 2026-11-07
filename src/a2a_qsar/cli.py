@@ -221,6 +221,30 @@ def cmd_campaign(args: argparse.Namespace) -> int:
         _write_csv(results, REPORTS / "campaign_assay_quality.csv")
         summary = active.summarize(results, ["assay_sd"])
         _write_csv(summary, REPORTS / "campaign_assay_quality_summary.csv")
+
+        # Arms share seeds, so compare them paired; between-seed spread is
+        # larger than the effect and would otherwise swamp it.
+        levels = sorted(results["assay_sd"].unique())
+        contrasts = []
+        for metric in ("n_true_actives_found", "n_false_calls"):
+            for level in levels[1:]:
+                try:
+                    contrasts.append(
+                        active.paired_contrast(
+                            results, "assay_sd", levels[0], level, metric=metric
+                        )
+                    )
+                except ValueError as error:
+                    print(f"skipped contrast {levels[0]} vs {level}: {error}")
+        _write_json(
+            {"contrasts": contrasts}, REPORTS / "campaign_assay_quality_contrasts.json"
+        )
+        for row in contrasts:
+            print(
+                f"{row['metric']}: sd {row['reference']} vs {row['comparison']} "
+                f"diff {row['mean_difference']:+.1f} "
+                f"(wilcoxon p={row['wilcoxon_p']:.3f}, n={row['n_seeds']})"
+            )
         print(
             summary[summary["round"] == summary["round"].max()][
                 [

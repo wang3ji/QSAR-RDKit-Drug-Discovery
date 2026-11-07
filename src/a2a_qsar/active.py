@@ -324,6 +324,68 @@ def compare_assay_quality(
     return pd.concat(frames, ignore_index=True)
 
 
+def paired_contrast(
+    results: pd.DataFrame,
+    group_column: str,
+    reference,
+    comparison,
+    metric: str = "n_true_actives_found",
+    round_index: int | None = None,
+) -> dict:
+    """Compare two campaign arms seed by seed.
+
+    Arms share their seeds, so the same starting compounds and the same
+    acquisition randomness appear in both. Pairing on seed removes that shared
+    variance, which matters here: between-seed spread is larger than the
+    effect being measured, so an unpaired comparison of the means would hide a
+    difference that is consistent within every seed.
+
+    Reports the paired t-test and the Wilcoxon signed-rank test together. With
+    ten seeds the normality assumption behind the t-test is not checkable, so
+    the distribution-free test is the one to believe when they disagree.
+    """
+    from scipy.stats import ttest_rel, wilcoxon
+
+    if round_index is None:
+        round_index = int(results["round"].max())
+    at_round = results[results["round"] == round_index]
+
+    left = at_round[at_round[group_column] == reference].set_index("seed")[metric]
+    right = at_round[at_round[group_column] == comparison].set_index("seed")[metric]
+    shared = sorted(set(left.index) & set(right.index))
+    if len(shared) < 3:
+        raise ValueError(
+            f"only {len(shared)} shared seeds between {reference!r} and "
+            f"{comparison!r}; need at least 3 to compare"
+        )
+
+    left, right = left.loc[shared], right.loc[shared]
+    differences = (left - right).to_numpy(dtype=float)
+    identical = bool(np.all(differences == 0))
+
+    return {
+        "group_column": group_column,
+        "reference": reference,
+        "comparison": comparison,
+        "metric": metric,
+        "round": round_index,
+        "n_seeds": len(shared),
+        "reference_mean": float(left.mean()),
+        "comparison_mean": float(right.mean()),
+        "mean_difference": float(differences.mean()),
+        "median_difference": float(np.median(differences)),
+        "relative_difference": (
+            float(differences.mean() / left.mean()) if left.mean() else float("nan")
+        ),
+        "paired_t_p": (
+            float("nan") if identical else float(ttest_rel(left, right).pvalue)
+        ),
+        "wilcoxon_p": (
+            float("nan") if identical else float(wilcoxon(left, right).pvalue)
+        ),
+    }
+
+
 def summarize(results: pd.DataFrame, group_columns: list[str]) -> pd.DataFrame:
     """Mean and spread across seeds at each round."""
     return (
