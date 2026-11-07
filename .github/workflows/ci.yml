@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Test
+        run: pytest --cov=a2a_qsar --cov-report=term-missing
+
+  reproduce:
+    # The headline numbers are regenerated from the committed snapshots on
+    # every change, so a result in the README cannot drift from the code.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Curate and estimate assay noise
+        run: |
+          a2a-qsar curate
+          a2a-qsar assay-noise --repeats 50
+
+      - name: Benchmark
+        run: a2a-qsar benchmark --representations morgan --models random_forest
+
+      - name: Short campaign smoke test
+        run: |
+          a2a-qsar campaign --experiment assay-quality \
+            --assay-sds 0.0 1.0 --rounds 3 --replicates 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: reports/
