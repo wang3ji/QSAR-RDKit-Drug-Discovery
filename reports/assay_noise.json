@@ -1,0 +1,49 @@
+{
+  "noise_estimate": {
+    "n_replicated_compounds": 170,
+    "n_measurements": 427,
+    "median_sd": 0.10937115313453452,
+    "pooled_sd": 0.6001351583359626,
+    "median_range": 0.18246987428455608,
+    "recommended_sd": 0.6001351583359626,
+    "source": "within-compound spread across independent assays"
+  },
+  "hit_confirmation": {
+    "perfect": {
+      "effective_sd": 0.0,
+      "n_truly_active": 556.0,
+      "mean_n_called_active": 556.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "mean_false_positives": 0.0,
+      "mean_false_negatives": 0.0
+    },
+    "excellent": {
+      "effective_sd": 0.3,
+      "n_truly_active": 556.0,
+      "mean_n_called_active": 565.175,
+      "precision": 0.8711372583713011,
+      "recall": 0.8855125899280576,
+      "mean_false_positives": 72.83,
+      "mean_false_negatives": 63.655
+    },
+    "empirical": {
+      "effective_sd": 0.6001351583359626,
+      "n_truly_active": 556.0,
+      "mean_n_called_active": 611.48,
+      "precision": 0.7246598416955583,
+      "recall": 0.7969694244604316,
+      "mean_false_positives": 168.365,
+      "mean_false_negatives": 112.885
+    },
+    "poor": {
+      "effective_sd": 1.0,
+      "n_truly_active": 556.0,
+      "mean_n_called_active": 717.445,
+      "precision": 0.5546278808828551,
+      "recall": 0.7156744604316547,
+      "mean_false_positives": 319.53,
+      "mean_false_negatives": 158.085
+    }
+  }
+}

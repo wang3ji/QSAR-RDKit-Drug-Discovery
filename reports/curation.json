@@ -1,0 +1,30 @@
+{
+  "target": "CHEMBL251",
+  "uniprot": "P29274",
+  "modelling_set_compounds": 983,
+  "screening_pool_compounds": 3995,
+  "curation": [
+    {
+      "source": "chembl251_annotated_bioactivity.csv",
+      "records_in": 1243,
+      "records_after_relation_filter": 1243,
+      "records_after_type_filter": 1243,
+      "records_after_structure_parsing": 1241,
+      "records_after_range_filter": 1240,
+      "compounds_out": 983,
+      "replicated_compounds": 170,
+      "median_within_compound_sd": 0.10937115313453452
+    },
+    {
+      "source": "chembl251_external_pxc50.tsv",
+      "records_in": 4081,
+      "records_after_relation_filter": 4081,
+      "records_after_type_filter": 4081,
+      "records_after_structure_parsing": 4081,
+      "records_after_range_filter": 4081,
+      "compounds_out": 4074,
+      "replicated_compounds": 7,
+      "median_within_compound_sd": 0.07707478480625933
+    }
+  ]
+}
